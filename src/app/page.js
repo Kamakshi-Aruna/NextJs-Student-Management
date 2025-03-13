@@ -1,103 +1,226 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import {useState, useEffect} from "react";
+import {BarChart3, Table, Search} from "lucide-react";
+import BarChartComponent from "@/app/components/Barchart";
+
+export default function StudentsPage() {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Default sort by marks in descending order (highest first)
+  const [sortConfig, setSortConfig] = useState({key: 'marks', direction: 'descending'});
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // View toggle state (table or bar)
+  const [view, setView] = useState('table');
+
+  const studentsPerPage = 5;
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  // Reset to first page when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortConfig]);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/students");
+      const data = await res.json();
+      setStudents(data.students);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({key, direction});
+  };
+
+  const sortedStudents = [...students].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+
+    if (sortConfig.key === 'marks') {
+      return sortConfig.direction === 'ascending'
+          ? parseInt(aValue) - parseInt(bValue)
+          : parseInt(bValue) - parseInt(aValue);
+    }
+
+    return sortConfig.direction === 'ascending' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+  });
+
+  const filteredStudents = sortedStudents.filter(student =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getSortIcon = (name) => {
+    if (sortConfig.key !== name) return null;
+    return sortConfig.direction === 'ascending' ? '↑' : '↓';
+  };
+
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const displayedStudents = filteredStudents.slice((currentPage - 1) * studentsPerPage, currentPage * studentsPerPage);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <div className="container mx-auto p-6 flex flex-col items-center">
+        <h1 className="text-3xl font-bold mb-6 text-center">Student Management</h1>
+        <div className="w-full max-w-7xl flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <div className="relative w-full md:w-64">
+            <input
+                type="text"
+                placeholder="Search students..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={18}/>
+          </div>
+          {/* View toggle buttons */}
+          <div className="flex items-center gap-2">
+            <button
+                className={`p-2 rounded-lg flex items-center gap-1 ${view === 'table' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                onClick={() => setView('table')}
+            >
+              <Table size={16}/>
+              <span className="text-sm">Table</span>
+            </button>
+            <button
+                className={`p-2 rounded-lg flex items-center gap-1 ${view === 'bar' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                onClick={() => setView('bar')}
+            >
+              <BarChart3 size={16}/>
+              <span className="text-sm">Bar Chart</span>
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        <div className="overflow-x-auto w-full max-w-7xl bg-white rounded-lg shadow-sm border border-gray-200">
+          {loading ? (
+              <div className="flex justify-center items-center p-8">
+                <div
+                    className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+          ) : (
+              <>
+                {view === "table" ? (
+                    <>
+                      <table className="w-full border-collapse text-left">
+                        <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="p-4 font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('name')}>Name {getSortIcon('name')}</th>
+                          <th className="p-4 font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('email')}>Email {getSortIcon('email')}</th>
+                          <th className="p-4 font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('subject')}>Subject {getSortIcon('subject')}</th>
+                          <th className="p-4 font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleSort('marks')}>
+                            Marks {getSortIcon('marks')}
+                            {sortConfig.key !== 'marks' &&
+                                <span className="ml-1 text-xs text-gray-400">(click to sort)</span>}
+                          </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {displayedStudents.length > 0 ? (
+                            displayedStudents.map((student) => (
+                                <tr key={student._id} className="border-b hover:bg-gray-50 transition-colors">
+                                  <td className="p-4">{student.name}</td>
+                                  <td className="p-4 truncate max-w-[150px]">{student.email}</td>
+                                  <td className="p-4">{student.subject}</td>
+                                  <td className="p-4">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        parseInt(student.marks) >= 80 ? 'bg-green-100 text-green-800' :
+                                            parseInt(student.marks) >= 60 ? 'bg-blue-100 text-blue-800' :
+                                                parseInt(student.marks) >= 40 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                    }`}>{student.marks}</span>
+                                  </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                              <td colSpan="4"
+                                  className="p-4 text-center text-gray-500">{searchTerm ? "No matching students found" : "No students available"}</td>
+                            </tr>
+                        )}
+                        </tbody>
+                      </table>
+
+                      {/* Pagination controls - only show in table view */}
+                      {totalPages > 0 && (
+                          <div className="flex justify-between items-center p-4 border-t">
+                            <div className="text-sm text-gray-500">
+                              Showing {((currentPage - 1) * studentsPerPage) + 1}-{Math.min(currentPage * studentsPerPage, filteredStudents.length)} of {filteredStudents.length}
+                            </div>
+                            <div className="flex space-x-1">
+                              {/* Previous button */}
+                              <button
+                                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                  disabled={currentPage === 1}
+                                  className={`px-2 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+                              >
+                                &laquo;
+                              </button>
+
+                              {/* Page numbers */}
+                              {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                  pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                  pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNum = totalPages - 4 + i;
+                                } else {
+                                  pageNum = currentPage - 2 + i;
+                                }
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        className={`mx-1 px-3 py-1 rounded ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                );
+                              })}
+
+                              {/* Next button */}
+                              <button
+                                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                  disabled={currentPage === totalPages}
+                                  className={`px-2 py-1 rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+                              >
+                                &raquo;
+                              </button>
+                            </div>
+                          </div>
+                      )}
+                    </>
+                ) : (
+                    // Bar chart view - using imported component with all filtered students
+                    <BarChartComponent students={filteredStudents}/>
+                )}
+              </>
+          )}
+        </div>
+      </div>
   );
 }
