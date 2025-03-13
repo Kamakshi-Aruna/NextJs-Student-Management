@@ -15,3 +15,5 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+![Table Image](https://raw.githubusercontent.com/Kamakshi-Aruna/NextJs-Student-Management/refs/heads/master/public/Table.png)
