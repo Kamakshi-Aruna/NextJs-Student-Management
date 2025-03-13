@@ -22,3 +22,5 @@ Student Management System
 Table View--
 ![Table Image](https://raw.githubusercontent.com/Kamakshi-Aruna/NextJs-Student-Management/refs/heads/master/public/Table.png)
 BarChar View--
+![BarChart Image](https://raw.githubusercontent.com/Kamakshi-Aruna/NextJs-Student-Management/refs/heads/master/public/BarChart.png)
+
